@@ -21,16 +21,20 @@ async fn process_text(
     data: web::Json<ProcessTextRequest>,
     repo: web::Data<MongoRepo>,
 ) -> impl Responder {
-    let decoded_text = unidecode(&data.text)
+    let text = data
+        .text
         .chars()
         .filter(|c| c.is_alphabetic() || c.is_whitespace())
         .collect::<String>()
         .to_lowercase();
-    let words = decoded_text.split_whitespace().collect::<Vec<&str>>();
+    let words = text.split_whitespace().collect::<Vec<&str>>();
 
     let mut bigram_count = 0;
     for pair in words.windows(2) {
-        let result = repo.bigrams.upsert(pair[0], pair[1]).await;
+        let first = unidecode(&pair[0].replace('ñ', ".")).replace('.', "ñ");
+        let second = unidecode(&pair[1].replace('ñ', ".")).replace('.', "ñ");
+        let result = repo.bigrams.upsert(&first, &second).await;
+
         match result {
             Ok(_) => bigram_count += 1,
             Err(err) => {
@@ -46,15 +50,18 @@ async fn process_text(
 
 #[post("/predict")]
 async fn predict(repo: web::Data<MongoRepo>, data: web::Json<PredictRequest>) -> impl Responder {
-    let decoded_text = unidecode(&data.text)
+    let text = data
+        .text
         .chars()
         .filter(|c| c.is_alphabetic() || c.is_whitespace())
         .collect::<String>()
         .to_lowercase();
 
-    let words = decoded_text.split_whitespace().collect::<Vec<&str>>();
+    let text = unidecode(&text.replace('ñ', ".")).replace('.', "ñ");
 
-    let last_char = decoded_text.chars().last();
+    let words = text.split_whitespace().collect::<Vec<&str>>();
+
+    let last_char = text.chars().last();
     let mut last_word = words.last().cloned();
     let mut second_to_last_word = words.get(words.len().wrapping_sub(2)).cloned();
 
