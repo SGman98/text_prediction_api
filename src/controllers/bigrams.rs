@@ -1,5 +1,6 @@
 use actix_web::{get, post, web, HttpResponse, Responder};
 use serde_json::json;
+use unidecode::unidecode;
 
 use crate::{
     models::{
@@ -20,13 +21,12 @@ async fn process_text(
     data: web::Json<ProcessTextRequest>,
     repo: web::Data<MongoRepo>,
 ) -> impl Responder {
-    let text = data
-        .text
+    let decoded_text = unidecode(&data.text)
         .chars()
         .filter(|c| c.is_alphabetic() || c.is_whitespace())
         .collect::<String>()
         .to_lowercase();
-    let words = text.split_whitespace().collect::<Vec<&str>>();
+    let words = decoded_text.split_whitespace().collect::<Vec<&str>>();
 
     let mut bigram_count = 0;
     for pair in words.windows(2) {
@@ -46,16 +46,15 @@ async fn process_text(
 
 #[post("/predict")]
 async fn predict(repo: web::Data<MongoRepo>, data: web::Json<PredictRequest>) -> impl Responder {
-    let text = data
-        .text
+    let decoded_text = unidecode(&data.text)
         .chars()
         .filter(|c| c.is_alphabetic() || c.is_whitespace())
         .collect::<String>()
         .to_lowercase();
 
-    let words = text.split_whitespace().collect::<Vec<&str>>();
+    let words = decoded_text.split_whitespace().collect::<Vec<&str>>();
 
-    let last_char = text.chars().last();
+    let last_char = decoded_text.chars().last();
     let mut last_word = words.last().cloned();
     let mut second_to_last_word = words.get(words.len().wrapping_sub(2)).cloned();
 
