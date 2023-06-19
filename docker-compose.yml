@@ -21,6 +21,7 @@ services:
       - PORT=8000
       - MONGO_URI=mongodb://mongo_user:mongo_password@db:27017
       - MONGO_DB=api
+      - FRONT_URL=http://localhost
     ports:
       - "8000:8000"
     depends_on:
