@@ -2,12 +2,17 @@ use actix_web::{get, post, web, HttpResponse, Responder};
 use serde_json::json;
 
 use crate::{
-    models::{bigrams::ProcessTextRequest, pagination::Pagination},
+    models::{
+        bigrams::{PredictRequest, ProcessTextRequest},
+        pagination::Pagination,
+    },
     repositories::MongoRepo,
 };
 
 pub fn register_routes(cfg: &mut web::ServiceConfig) {
-    cfg.service(process_text).service(get_process_text);
+    cfg.service(process_text)
+        .service(get_process_text)
+        .service(predict);
 }
 
 #[post("/process_text")]
@@ -37,6 +42,60 @@ async fn process_text(
     }
 
     HttpResponse::Ok().json(json!({ "data": { "bigram_count": bigram_count } }))
+}
+
+#[post("/predict")]
+async fn predict(repo: web::Data<MongoRepo>, data: web::Json<PredictRequest>) -> impl Responder {
+    let text = data
+        .text
+        .chars()
+        .filter(|c| c.is_alphabetic() || c.is_whitespace())
+        .collect::<String>()
+        .to_lowercase();
+
+    let words = text.split_whitespace().collect::<Vec<&str>>();
+
+    let last_char = text.chars().last();
+    let mut last_word = words.last().cloned();
+    let mut second_to_last_word = words.get(words.len().wrapping_sub(2)).cloned();
+
+    if Some(' ') == last_char {
+        second_to_last_word = last_word;
+        last_word = None;
+    }
+
+    let layout = repo.layouts.find(&data.layout).await.unwrap().unwrap();
+    let keys = layout.keys;
+
+    let result = repo
+        .bigrams
+        .find_predictions(second_to_last_word, last_word, keys.clone())
+        .await;
+
+    match result {
+        Ok(data) => {
+            if !data.is_empty() {
+                return HttpResponse::Ok().json(json!({ "data": { "prediction": data } }));
+            }
+        }
+        Err(err) => {
+            return HttpResponse::InternalServerError().json(json!({
+                "error": err.to_string()
+            }));
+        }
+    }
+
+    let result = repo
+        .bigrams
+        .find_predictions(None, last_word, keys.clone())
+        .await;
+
+    match result {
+        Ok(data) => HttpResponse::Ok().json(json!({ "data": { "prediction": data } })),
+        Err(err) => HttpResponse::InternalServerError().json(json!({
+            "error": err.to_string()
+        })),
+    }
 }
 
 #[get("/process_text")]

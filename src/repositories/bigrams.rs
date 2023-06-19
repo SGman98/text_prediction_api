@@ -6,7 +6,13 @@ use mongodb::{
     results, IndexModel,
 };
 
-use crate::models::{bigrams::BigramModel, pagination::Pagination};
+use crate::{
+    models::{
+        bigrams::{BigramModel, Prediction},
+        pagination::Pagination,
+    },
+    utils::get_regex,
+};
 
 #[derive(Clone)]
 pub struct BigramRepo {
@@ -35,6 +41,53 @@ impl BigramRepo {
         let update = doc! {"$inc": {"count": 1}};
         let options = UpdateOptions::builder().upsert(true).build();
         self.collection.update_one(filter, update, options).await
+    }
+
+    pub async fn find_predictions(
+        &self,
+        first: Option<&str>,
+        second: Option<&str>,
+        keys: Vec<String>,
+    ) -> Result<Vec<Prediction>, Error> {
+        let (first, second) = match (first, second) {
+            (Some(first), Some(second)) => (
+                format!("^{}$", first),
+                format!("^{}", get_regex(second, keys)),
+            ),
+            (Some(first), None) => (format!("^{}$", first), "^.*".to_string()),
+            (None, Some(second)) => ("^.*".to_string(), format!("^{}", get_regex(second, keys))),
+            (None, None) => ("^.*".to_string(), "^.*".to_string()),
+        };
+
+        let pipeline = vec![
+            doc! {"$match": {"first": {"$regex": &first} , "second": {"$regex": &second}}},
+            doc! {"$group": {"_id": null, "total": {"$sum": "$count"}}},
+        ];
+
+        let total_count = self
+            .collection
+            .aggregate(pipeline, None)
+            .await?
+            .try_next()
+            .await?
+            .unwrap_or(doc! {"total": 0})
+            .get_i32("total")
+            .unwrap();
+
+        let pipeline = vec![
+            doc! {"$match": {"first": {"$regex": first} , "second": {"$regex": second}}},
+            doc! {"$project": {"_id": 0, "word": "$second", "probability": {"$divide": ["$count", total_count]}}},
+            doc! {"$sort": {"probability": -1}},
+        ];
+
+        let mut result = self.collection.aggregate(pipeline, None).await?;
+
+        let mut predictions = vec![];
+        while let Some(doc) = result.try_next().await? {
+            let doc: Prediction = bson::from_document(doc)?;
+            predictions.push(doc);
+        }
+        Ok(predictions)
     }
 
     pub async fn find_all(&self, pagination: Pagination) -> Result<Vec<BigramModel>, Error> {

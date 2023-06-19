@@ -13,3 +13,15 @@ pub struct BigramModel {
 pub struct ProcessTextRequest {
     pub text: String,
 }
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct PredictRequest {
+    pub text: String,
+    pub layout: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Prediction {
+    pub word: String,
+    pub probability: f64,
+}
