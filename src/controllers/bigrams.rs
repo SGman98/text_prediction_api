@@ -4,7 +4,7 @@ use unidecode::unidecode;
 
 use crate::{
     models::{
-        bigrams::{PredictRequest, ProcessTextRequest},
+        bigrams::{PredictRequest, Prediction, ProcessTextRequest},
         pagination::Pagination,
     },
     repositories::MongoRepo,
@@ -49,7 +49,11 @@ async fn process_text(
 }
 
 #[post("/predict")]
-async fn predict(repo: web::Data<MongoRepo>, data: web::Json<PredictRequest>) -> impl Responder {
+async fn predict(
+    repo: web::Data<MongoRepo>,
+    data: web::Json<PredictRequest>,
+    query: web::Query<Pagination>,
+) -> impl Responder {
     let text = data
         .text
         .chars()
@@ -81,6 +85,11 @@ async fn predict(repo: web::Data<MongoRepo>, data: web::Json<PredictRequest>) ->
     match result {
         Ok(data) => {
             if !data.is_empty() {
+                let data = data
+                    .into_iter()
+                    .skip(query.offset.unwrap_or(0) as usize)
+                    .take(query.limit.unwrap_or(10) as usize)
+                    .collect::<Vec<Prediction>>();
                 return HttpResponse::Ok().json(json!({ "data": { "prediction": data } }));
             }
         }
@@ -97,7 +106,14 @@ async fn predict(repo: web::Data<MongoRepo>, data: web::Json<PredictRequest>) ->
         .await;
 
     match result {
-        Ok(data) => HttpResponse::Ok().json(json!({ "data": { "prediction": data } })),
+        Ok(data) => {
+            let data = data
+                .into_iter()
+                .skip(query.offset.unwrap_or(0) as usize)
+                .take(query.limit.unwrap_or(10) as usize)
+                .collect::<Vec<Prediction>>();
+            HttpResponse::Ok().json(json!({ "data": { "prediction": data } }))
+        }
         Err(err) => HttpResponse::InternalServerError().json(json!({
             "error": err.to_string()
         })),
