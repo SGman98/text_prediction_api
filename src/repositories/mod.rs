@@ -1,10 +1,12 @@
 use mongodb::Client;
 
 pub mod greetings;
+pub mod layouts;
 
 #[derive(Clone)]
 pub struct MongoRepo {
     pub greetings: greetings::GreetingRepo,
+    pub layouts: layouts::LayoutRepo,
 }
 
 impl MongoRepo {
@@ -17,8 +19,9 @@ impl MongoRepo {
         let db = client.database(db_name);
 
         let greetings = greetings::GreetingRepo::init(&db).await;
+        let layouts = layouts::LayoutRepo::init(&db).await;
 
-        Self { greetings }
+        Self { greetings, layouts }
     }
 
     #[allow(dead_code)]
