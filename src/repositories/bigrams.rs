@@ -2,11 +2,11 @@ use bson::doc;
 use futures::stream::TryStreamExt;
 use mongodb::{
     error::Error,
-    options::{IndexOptions, UpdateOptions},
+    options::{FindOptions, IndexOptions, UpdateOptions},
     results, IndexModel,
 };
 
-use crate::models::bigrams::BigramModel;
+use crate::models::{bigrams::BigramModel, pagination::Pagination};
 
 #[derive(Clone)]
 pub struct BigramRepo {
@@ -37,7 +37,16 @@ impl BigramRepo {
         self.collection.update_one(filter, update, options).await
     }
 
-    pub async fn find_all(&self) -> Result<Vec<BigramModel>, Error> {
-        self.collection.find(None, None).await?.try_collect().await
+    pub async fn find_all(&self, pagination: Pagination) -> Result<Vec<BigramModel>, Error> {
+        let options = FindOptions::builder()
+            .sort(doc! {"count": -1})
+            .limit(pagination.limit.unwrap_or(10))
+            .skip(pagination.offset.unwrap_or(0))
+            .build();
+        self.collection
+            .find(None, options)
+            .await?
+            .try_collect()
+            .await
     }
 }

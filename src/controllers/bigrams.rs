@@ -1,7 +1,10 @@
 use actix_web::{get, post, web, HttpResponse, Responder};
 use serde_json::json;
 
-use crate::{models::bigrams::ProcessTextRequest, repositories::MongoRepo};
+use crate::{
+    models::{bigrams::ProcessTextRequest, pagination::Pagination},
+    repositories::MongoRepo,
+};
 
 pub fn register_routes(cfg: &mut web::ServiceConfig) {
     cfg.service(process_text).service(get_process_text);
@@ -42,8 +45,9 @@ async fn process_text(
 #[get("/process_text")]
 async fn get_process_text(
     repo: web::Data<MongoRepo>,
+    query: web::Query<Pagination>,
 ) -> impl Responder {
-    let result = repo.bigrams.find_all().await;
+    let result = repo.bigrams.find_all(query.into_inner()).await;
 
     match result {
         Ok(data) => {
