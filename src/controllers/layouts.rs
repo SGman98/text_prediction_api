@@ -57,11 +57,7 @@ async fn create_layout(
 
 #[get("/{layout_name}")]
 async fn get_layout(path: web::Path<LayoutPath>, repo: web::Data<MongoRepo>) -> impl Responder {
-    println!("path: {:?}", path.layout_name);
-
     let result = repo.layouts.find(&path.layout_name).await;
-
-    println!("result: {:?}", result);
 
     match result {
         Ok(Some(data)) => HttpResponse::Ok().json(json!({ "data": data })),

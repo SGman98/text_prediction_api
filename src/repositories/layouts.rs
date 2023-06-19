@@ -1,6 +1,6 @@
 use bson::doc;
 use futures::stream::TryStreamExt;
-use mongodb::{ error::Error, options::IndexOptions, results, IndexModel};
+use mongodb::{error::Error, options::IndexOptions, results, IndexModel};
 
 use crate::models::layouts::LayoutModel;
 

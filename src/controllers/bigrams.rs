@@ -23,11 +23,8 @@ async fn process_text(
         .to_lowercase();
     let words = text.split_whitespace().collect::<Vec<&str>>();
 
-    println!("words: {:?}", words);
-
     let mut bigram_count = 0;
     for pair in words.windows(2) {
-        println!("pair: {:?}", pair);
         let result = repo.bigrams.upsert(pair[0], pair[1]).await;
         match result {
             Ok(_) => bigram_count += 1,
