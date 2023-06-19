@@ -1,5 +1,6 @@
 use mongodb::Client;
 
+pub mod bigrams;
 pub mod greetings;
 pub mod layouts;
 
@@ -7,6 +8,7 @@ pub mod layouts;
 pub struct MongoRepo {
     pub greetings: greetings::GreetingRepo,
     pub layouts: layouts::LayoutRepo,
+    pub bigrams: bigrams::BigramRepo,
 }
 
 impl MongoRepo {
@@ -20,8 +22,13 @@ impl MongoRepo {
 
         let greetings = greetings::GreetingRepo::init(&db).await;
         let layouts = layouts::LayoutRepo::init(&db).await;
+        let bigrams = bigrams::BigramRepo::init(&db).await;
 
-        Self { greetings, layouts }
+        Self {
+            greetings,
+            layouts,
+            bigrams,
+        }
     }
 
     #[allow(dead_code)]
