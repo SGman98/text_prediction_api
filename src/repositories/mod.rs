@@ -1,12 +1,10 @@
 use mongodb::Client;
 
 pub mod bigrams;
-pub mod greetings;
 pub mod layouts;
 
 #[derive(Clone)]
 pub struct MongoRepo {
-    pub greetings: greetings::GreetingRepo,
     pub layouts: layouts::LayoutRepo,
     pub bigrams: bigrams::BigramRepo,
 }
@@ -20,12 +18,10 @@ impl MongoRepo {
             .expect("Failed to initialize client.");
         let db = client.database(db_name);
 
-        let greetings = greetings::GreetingRepo::init(&db).await;
         let layouts = layouts::LayoutRepo::init(&db).await;
         let bigrams = bigrams::BigramRepo::init(&db).await;
 
         Self {
-            greetings,
             layouts,
             bigrams,
         }

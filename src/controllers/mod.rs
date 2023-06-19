@@ -2,7 +2,6 @@ use actix_web::web;
 
 pub mod bigrams;
 pub mod examples;
-pub mod greetings;
 pub mod layouts;
 
 pub fn register_routes(cfg: &mut web::ServiceConfig) {
@@ -11,7 +10,6 @@ pub fn register_routes(cfg: &mut web::ServiceConfig) {
     cfg.service(
         scope
             .configure(examples::register_routes)
-            .configure(greetings::register_routes)
             .configure(bigrams::register_routes)
             .configure(layouts::register_routes),
     );
