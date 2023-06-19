@@ -26,7 +26,7 @@ async fn get_layouts(repo: web::Data<MongoRepo>) -> impl Responder {
     let layouts = repo.layouts.find_all().await;
 
     match layouts {
-        Ok(layouts) => HttpResponse::Ok().json(json!({ "data": layouts })),
+        Ok(layouts) => HttpResponse::Ok().json(json!({ "data": { "layouts": layouts } })),
         Err(err) => HttpResponse::InternalServerError().json(json!({ "error": err.to_string() })),
     }
 }
