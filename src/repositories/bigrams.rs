@@ -76,7 +76,8 @@ impl BigramRepo {
 
         let pipeline = vec![
             doc! {"$match": {"first": {"$regex": first} , "second": {"$regex": second}}},
-            doc! {"$project": {"_id": 0, "word": "$second", "probability": {"$divide": ["$count", total_count]}}},
+            doc! {"$group": {"_id": "$second", "count": {"$sum": "$count"}}},
+            doc! {"$project": {"_id": 0, "word": "$_id", "probability": {"$divide": ["$count", total_count]}}},
             doc! {"$sort": {"probability": -1}},
         ];
 
